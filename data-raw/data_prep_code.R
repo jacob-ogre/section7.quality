@@ -60,8 +60,15 @@ dim(informal_sub)
 combo <- rbind(formal_sub, informal_sub)
 dim(combo)
 
-# make the no programmatics df (useful for plots)
+devtools::use_data(combo)
+
+# make the no programmatics df (formal); useful for plotting
 no_prog <- formal[formal$Programmatic == "0", ]
 dim(no_prog)
+
+# make the no programmatics df (formal + informal); useful for plotting
 all_no_prog <- combo[combo$Programmatic == "0", ]
 dim(all_no_prog)
+
+devtools::use_data(no_prog)
+devtools::use_data(all_no_prog)
