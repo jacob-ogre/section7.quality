@@ -33,9 +33,6 @@ data(all_no_prog, package = "section7.quality")
 all_overQ <- run_glm_combo(combo)
 aictab(all_overQ$mods)  # mod 9 (best) & 2 differ only by year...base inference on 9, but note year effect estimates
 all_mod2_OR_CI9 <- get_ORs_CIs(all_overQ$mods[[9]])
-all_mod2_OR_CI2 <- get_ORs_CIs(all_overQ$mods[[2]])
-all_mod2_std <- lm.beta(all_overQ$mods[[9]])
-all_mod2_std_OR <- get_ORs_CIs(all_mod2_std)
 
 write.table(aictab(all_overQ$mods),
             file = "inst/overallQ_all_AICtable.tsv",

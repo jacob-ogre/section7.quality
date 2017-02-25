@@ -10,6 +10,7 @@
 #'     \item{summaries}{Results from \code{summary(mod)} for the nine models}
 #'     \item{aovs}{Analysis of Variance for the nine models}
 #'   }
+#' @importFrom AICcmodavg AICc
 #' @export
 #' @examples
 #' \dontrun{

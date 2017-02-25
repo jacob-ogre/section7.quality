@@ -1,0 +1,268 @@
+---
+title: "Section 7 quality - analyses for Evansen et al."
+author: "Megan Evansen, Ya-Wei Li, and Jacob Malcom"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_document:
+    code_folding: hide
+    css: custom.css
+    df_print: kable
+    fig_caption: yes
+    fig_width: 7
+    highlight: tango
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+# Data import
+
+```{r steup}
+library(AICcmodavg)
+library(ggplot2)
+library(ggthemes)
+library(glmulti)
+library(knitr)
+library(lm.beta)
+library(lmtest)
+library(MASS)
+library(nnet)
+library(readxl)
+library(readr)
+library(section7.quality)
+
+# Load the data
+data(combo, package = "section7.quality")
+data(formal, package = "section7.quality")
+data(informal, package = "section7.quality")
+data(no_prog, package = "section7.quality")
+data(all_no_prog, package = "section7.quality")
+```
+
+# Analyses
+
+We start broad and slowly drill down on the results:
+
+1. overall quality for formal + informal
+2. overall specificity of conservation actions for formals
+3. components of specificity and quality for formals
+4. components of informal quality
+
+## Overall quality
+
+### All consultations
+
+```{r overall_qual}
+all_overQ <- run_glm_combo(combo)
+kable(aictab(all_overQ$mods))
+```
+
+Models 9 (best) & 2 differ only by year...base inference on 9, but note year 
+effect estimates. Now to calculate the confidence intervals for the odds ratios:
+
+```{r overall_qual_2}
+mod9_OR_CI <- get_ORs_CIs(all_overQ$mods[[9]])
+kable(mod9_OR_CI)
+```
+
+## Quality components: formal consultations
+
+### Species status
+
+```{r}
+statusQ_mods <- run_polrs(formal, formal$status_Q)
+aictab(statusQ_mods$mods)
+statusQ_mods$summaries[[2]] 
+statusQ_mods$coef[[2]]
+``` 
+
+Using model 2 b/c all params are present and very similar.
+
+### Baseline conditions
+
+```{r}
+baselineQ_mods <- run_polrs(formal, formal$baseline_Q)
+aictab(baselineQ_mods$mods)
+baselineQ_mods$summaries[[1]]
+baselineQ_mods$coef[[1]]
+```
+
+### effects analysis quality
+
+```{r}
+effQ_mods <- run_polrs(formal, formal$eff_Q)
+aictab(effQ_mods$mods)
+effQ_mods$summaries[[1]]
+effQ_mods$coef[[1]]
+```
+
+### cumulative effects
+
+```{r}
+CEQ_mods <- run_polrs(formal, formal$CE_Q)
+aictab(CEQ_mods$mods)
+# CR_mods$summaries[[1]]
+# CM_mods$coef[[1]]
+```
+
+## Quality components: informal consultations
+
+### Action mention
+
+```{r}
+action_mods <- inf_binom(informal, informal$mention_action)
+aictab(action_mods$mods)
+action_mods$summaries[[1]] # nothing significant (or even close)
+```
+
+### Action analysis
+
+```{r}
+act_analysis_mods <- inf_binom(informal, informal$act_analysis)
+aictab(act_analysis_mods$mods)
+act_analysis_mods$summaries[[1]] # only duration significant, and tiny effect (1.07 OR)
+
+ggplot(data = informal, aes(x = total_duration, y = act_analysis)) +
+geom_jitter(height = 0.1, size = 3, alpha = 0.2) +
+theme_hc()
+```
+
+### Species analysis
+
+```{r}
+sp_analysis_mods <- inf_binom(informal, informal$sp_analysis)
+aictab(sp_analysis_mods$mods)
+sp_analysis_mods$summaries[[2]] # only duration significant, and tiny effect (1.07 OR)
+
+ggplot(data = informal, aes(x = total_duration, y = sp_analysis)) +
+geom_jitter(height = 0.1, size = 3, alpha = 0.2) +
+theme_hc()
+```
+
+### Reason informal
+
+```{r}
+mention_reason_inf_mods <- inf_binom(informal, informal$mention_reason_inf)
+aictab(mention_reason_inf_mods$mods)
+mention_reason_inf_mods$summaries[[1]]
+
+qplot(data = informal, x = Service, y = mention_reason_inf, geom="violin") +
+    geom_jitter(height = 0.1, width = 0.4, alpha = 0.2, size = 3) +
+    theme_hc()
+```
+
+### Map included?
+
+```{r}
+map_mods <- inf_binom(informal, informal$map)
+aictab(map_mods$mods)
+map_mods$summaries[[1]] # Service has OR = 5.08
+map_mods$summaries[[3]]
+
+qplot(data = informal, x = Service, y = map, geom="violin") +
+    geom_jitter(height = 0.1, width = 0.4, alpha = 0.2, size = 3) +
+    theme_hc()
+```
+
+# Plots
+
+## Overall quality terms
+
+### Formal + informal
+
+```{r}
+par(mfrow = c(1, 3))
+boxplot(combo$Overall_Q ~ combo$Programmatic,
+        main = "Programmatics",
+        ylab = "% overall quality")
+boxplot(combo$Overall_Q ~ combo$Service,
+        main = "With programmatics",
+        ylab = "")
+boxplot(combo[combo$Programmatic == "0", ]$Overall_Q ~ combo[combo$Programmatic == "0", ]$Service,
+        main = "Without programmatics",
+        ylab = "")
+par(mfrow = c(1, 1))
+```
+
+### Formal only
+
+```{r}
+par(mfrow = c(1, 3))
+boxplot(formal$Overall_Q ~ formal$Programmatic,
+        main = "Programmatics",
+        ylab = "% overall quality")
+boxplot(formal$Overall_Q ~ formal$Service,
+        main = "With programmatics",
+        ylab = "")
+boxplot(formal[formal$Programmatic == "0", ]$Overall_Q ~ formal[formal$Programmatic == "0", ]$Service,
+        main = "Without programmatics",
+        ylab = "")
+par(mfrow = c(1, 1))
+```
+
+### Year effects
+
+```{r}
+par(mfrow = c(3, 1))
+boxplot(combo$Overall_Q ~ factor(combo$Year),
+        main = "All through time",
+        ylab = "% overall quality")
+boxplot(formal$Overall_Q ~ factor(formal$Year),
+        main = "Formal through time",
+        ylab = "% overall quality")
+boxplot(informal$Overall_Q ~ factor(informal$Year),
+        main = "Informals through time",
+        ylab = "% overall quality")
+par(mfrow = c(1, 1))
+```
+
+### Service effect
+
+```{r}
+boxplot(informal$Overall_Q ~ informal$Service,
+        main = "Informals By Service",
+        ylab = "% overall quality")
+```
+
+### Duration effects
+
+```{r}
+plot(combo$Overall_Q ~ combo$total_duration,
+     xlab = "Duration (days)",
+     ylab = "% overall quality",
+     pch = c(17, 19)[as.numeric(factor(combo$Formal))],
+     col = c("red", "blue")[as.numeric(factor(combo$Service))])
+abline(lm(Overall_Q ~ total_duration, data = combo[combo$Service == "NMFS",]),
+       col="red")
+abline(lm(Overall_Q ~ total_duration, data = combo[combo$Service == "FWS",]),
+       col="blue")
+```
+
+And some quick plots of quality components so I could visualize the data while
+troubleshooting the models
+
+```{r}
+plt <- ggplot(data = formal, aes(status_Q)) +
+       geom_bar() +
+       facet_grid(. ~ Service + Programmatic) +
+       theme_hc()
+plt
+
+plt <- ggplot(data = formal, aes(baseline_Q)) +
+       geom_bar() +
+       facet_grid(. ~ Service + Programmatic) +
+       theme_hc()
+plt
+
+plt <- ggplot(data = formal, aes(eff_Q)) +
+       geom_bar() +
+       facet_grid(. ~ Service + Programmatic) +
+       theme_hc()
+plt
+
+plt <- ggplot(data = formal, aes(CE_Q)) +
+       geom_bar() +
+       facet_grid(. ~ Service + Programmatic) +
+       theme_hc()
+plt
+```
