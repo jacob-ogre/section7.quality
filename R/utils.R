@@ -263,6 +263,9 @@ run_polrs <- function(x, y) {
   mod3 <- clmm(as.factor(y) ~ yr + (1|PDF_ID),
                data = x,
                Hess = TRUE)
+
+  ###############
+  # removed the polr analyses becasue the random effects of consultation needed
   # mod1 <- polr(as.factor(y) ~ Service + Programmatic + Year,
   #              data = x,
   #              Hess = TRUE)
@@ -278,20 +281,16 @@ run_polrs <- function(x, y) {
 
   mods <- list(m1 = mod1,
                m2 = mod2,
-               m3 = mod3) #,
-               # m4 = mod4)
+               m3 = mod3)
   AICs <- list(m1 = AICc(mod1),
                m2 = AICc(mod2),
-               m3 = AICc(mod3)) #,
-               # m4 = AICc(mod4))
+               m3 = AICc(mod3))
   sums <- list(m1 = summary(mod1),
                m2 = summary(mod2),
-               m3 = summary(mod3)) #,
-               # m4 = summary(mod4))
+               m3 = summary(mod3))
   coef <- list(m1 = coeftest(mod1),
                m2 = coeftest(mod2),
-               m3 = coeftest(mod3)) #,
-               # m4 = coeftest(mod4))
+               m3 = coeftest(mod3))
   return(list(mods = mods, AICs = AICs, summaries = sums, coef = coef))
 }
 

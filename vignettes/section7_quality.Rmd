@@ -102,7 +102,10 @@ all_overQ <- run_glm_combo(combo)
 kable(aictab(all_overQ$mods))
 
 bar <- ggplot(combo, aes(combo$Overall_Q, fill = Service)) + 
-  geom_histogram(alpha = 0.8, position = position_dodge(), bins = 7) + 
+  geom_histogram(
+    alpha = 0.8, 
+    position = position_dodge(), 
+    bins = 7) + 
   labs(x = "Overall Quality") +
   scale_fill_viridis(discrete = TRUE) +
   theme_hc() +
@@ -127,6 +130,10 @@ box <- ggplot(combo, aes(y = combo$Overall_Q, x = Service)) +
         plot.margin = unit(c(2.5,0.3,0.1,1.1), "cm"))
 
 multiplot(box, bar)
+
+# pdf(file = "inst/figures/Fig1a.pdf", height = 7, width = 7)
+# multiplot(box, bar)
+# dev.off()
 ```
 
 Models 9 (best) & 2 differ only by year...base inference on 9, but note year 
@@ -153,8 +160,11 @@ kable(mod2_OR_CI)
 #######################
 # plot!
 f_bar <- ggplot(formal, aes(formal$Overall_Q, fill = Service)) + 
-  geom_histogram(alpha = 0.8, position = position_dodge(), bins = 7) + 
-  labs(x = "Overall Quality (formal)") +
+  geom_histogram(
+    alpha = 0.8, 
+    position = position_dodge(), 
+    bins = 7) + 
+  labs(x = "Overall Quality", y = "# consultations") +
   scale_fill_viridis(discrete = TRUE) +
   theme_hc() +
   theme(
@@ -165,8 +175,11 @@ f_bar <- ggplot(formal, aes(formal$Overall_Q, fill = Service)) +
   )
 
 i_bar <- ggplot(informal, aes(informal$Overall_Q, fill = Service)) + 
-  geom_histogram(alpha = 0.8, position = position_dodge(), bins = 7) + 
-  labs(x = "Overall Quality (informal)") +
+  geom_histogram(
+    alpha = 0.8, 
+    position = position_dodge(), 
+    bins = 7) + 
+  labs(x = "Overall Quality") +
   scale_fill_viridis(discrete = TRUE) +
   theme_hc() +
   theme(
@@ -183,12 +196,14 @@ f_box <- ggplot(formal, aes(y = formal$Overall_Q, x = Service)) +
   scale_color_viridis(discrete = TRUE) +
   scale_fill_viridis(discrete = TRUE) +
   coord_flip() +
+  ggtitle("Formal") +
   labs(x = "", y = "") +
   theme_hc() + 
   theme(legend.position = "none",
         axis.text.x = element_blank(),
         axis.ticks = element_blank(),
-        plot.margin = unit(c(2.5,0.3,0.1,0.1), "cm"))
+        plot.margin = unit(c(2.5,0.2,0.1,0.1), "cm"),
+        plot.title = element_text(hjust = 0.5))
 
 i_box <- ggplot(informal, aes(y = informal$Overall_Q, x = Service)) +
   geom_boxplot(aes(fill = informal$Service), alpha = 0.8) + 
@@ -196,19 +211,26 @@ i_box <- ggplot(informal, aes(y = informal$Overall_Q, x = Service)) +
   scale_color_viridis(discrete = TRUE) +
   scale_fill_viridis(discrete = TRUE) +
   coord_flip() +
+  ggtitle("Informal") +
   labs(x = "", y = "") +
   theme_hc() + 
   theme(legend.position = "none",
         axis.text = element_blank(),
         axis.ticks = element_blank(),
-        plot.margin = unit(c(2.5,0.3,0.1,0.5), "cm"))
+        plot.margin = unit(c(2.5,0.3,0.1,0.5), "cm"),
+        plot.title = element_text(hjust = 0.5))
 
 multiplot(f_box, f_bar, i_box, i_bar, cols = 2)
+
+pdf(file = "inst/figures/Fig1b.pdf", height = 7, width = 7)
+multiplot(f_box, f_bar, i_box, i_bar, cols = 2)
+dev.off()
 ```
 
 ## Quality components: formal consultations
 ```{r echo = FALSE}
 formal$yr <- formal$Year - 2008
+fws <- filter(formal, Service == "FWS")
 fws_prog <- filter(formal, Service == "FWS" & Programmatic == 1)
 fws_noprog <- filter(formal, Service == "FWS" & Programmatic == 0)
 ```
@@ -217,25 +239,49 @@ We next dive into the individuals consultation components to identify patterns
 of variation. We focus on just two predictors, Service and year in the models,
 which include a random effects term for the consultation. We exclude whether the
 consultation was programmatic because programmatics were only done by FWS, which 
-results in badly inflated odds ratios. Instead, we provide only a simple 
-graphical analyses of programmatic effects.
+confounds parameter estimation. Instead, we provide only a simple graphical 
+analyses of programmatic effects.
 
 ### Species status
 
 ```{r}
 statusQ_mods <- run_polrs(formal, formal$status_Q)
 aictab(statusQ_mods$mods)
-statusQ_mods$summaries[[1]] 
-statusQ_mods$coef[[1]]
-get_ORs_CIs_alt(statusQ_mods$mods[[1]])
+statusQ_mods$summaries[[2]] 
+statusQ_mods$coef[[2]]
+get_ORs_CIs_alt(statusQ_mods$mods[[2]])
 
-ggplot(formal, aes(status_Q)) +
-  geom_bar(data = fws_prog, fill = "red", alpha = 0.3) +
-  geom_bar(data = fws_noprog, fill = "blue", alpha = 0.3) +
-  theme_hc()
+sp_stat <- ggplot(formal, aes(status_Q)) +
+  geom_bar(
+    aes(fill = Service), 
+    position = position_dodge(),
+    alpha = 0.8) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Species Status") +
+  labs(x = "", y = "# consultations") +
+  theme_hc() + 
+  theme(legend.position = c(0.2, 0.8),
+        plot.title = element_text(hjust = 0.5))
+
+ggplot(fws, aes(status_Q, fill = factor(Programmatic))) +
+  geom_histogram(bins = 6,
+                 position = "identity",
+                 alpha = 0.3) +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(x = "Species Status Score",
+       y = "# of consultations",
+       fill = "Programmatic?") +
+  theme_hc() + 
+  theme(legend.position = "top")
+
+tapply(fws$status_Q, INDEX = fws$Programmatic, FUN = mean, na.rm = TRUE)
 ``` 
 
-Using model 2 b/c all params are present and very similar.
+The three models all have very similar AICc values, but models 1 (Service) and 
+3 (year) are subsets of model 2. Even though its AICc is ~2 units higher, we use
+model 2 b/c all params are present and very similar. The main result is that 
+neither Service nor year have strong signals, nor (per the plot above and the 
+means between yes/no) does whether FWS consultations were programmatic.
 
 ### Baseline conditions
 
@@ -245,22 +291,78 @@ aictab(baselineQ_mods$mods)
 baselineQ_mods$summaries[[1]]
 baselineQ_mods$coef[[1]]
 get_ORs_CIs_alt(baselineQ_mods$mods[[1]])
+tapply(formal$baseline_Q, INDEX = formal$Service, FUN = mean, na.rm = TRUE)
 
-ggplot(formal, aes(baseline_Q, fill = Programmatic)) +
-  geom_bar(data = fws_prog, fill = "red", alpha = 0.3) +
-  geom_bar(data = fws_noprog, fill = "blue", alpha = 0.3) +
-  theme_hc()
+base_q <- ggplot(formal, aes(baseline_Q)) +
+  geom_bar(
+    aes(fill = Service), 
+    position = position_dodge(preserve = "single"),           
+    alpha = 0.8) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Env. Baseline") +
+  labs(x = "Score", y = "# consultations") +
+  theme_hc() + 
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
+
+ggplot(fws, aes(baseline_Q, fill = factor(Programmatic))) +
+  geom_histogram(bins = 4,
+                 position = "identity",
+                 alpha = 0.3) +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(x = "Env. Baseline Score",
+       y = "# of consultations",
+       fill = "Programmatic?") +
+  theme_hc() + 
+  theme(legend.position = "top")
+
+tapply(fws$baseline_Q, INDEX = fws$Programmatic, FUN = mean, na.rm = TRUE)
 ```
+
+Unlike the status quality, Service stands out as the best predictor of the
+quality of the environmental baseline. Similarly, the figure and means indicate
+that the programmatic consultations were important to increasing the env. 
+baseline score for FWS.
 
 ### effects analysis quality
 
 ```{r}
 effQ_mods <- run_polrs(formal, formal$eff_Q)
 aictab(effQ_mods$mods)
-effQ_mods$summaries[[1]]
-effQ_mods$coef[[1]]
-get_ORs_CIs_alt(effQ_mods$mods[[1]])
+effQ_mods$summaries[[2]]
+effQ_mods$coef[[2]]
+get_ORs_CIs_alt(effQ_mods$mods[[2]])
+tapply(formal$eff_Q, INDEX = formal$Service, FUN = mean, na.rm = TRUE)
+
+eff_q <- ggplot(formal, aes(formal$eff_Q)) +
+  geom_bar(
+    aes(fill = formal$Service), 
+    width = 0.9, 
+    position = position_dodge(preserve = "single"),
+    alpha = 0.8) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Effects Analysis") +
+  labs(x = "", y = "") +
+  theme_hc() + 
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
+
+ggplot(fws, aes(eff_Q, fill = factor(Programmatic))) +
+  geom_histogram(bins = 3,
+                 position = "identity",
+                 alpha = 0.3) +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(x = "Effects Score",
+       y = "# of consultations",
+       fill = "Programmatic?") +
+  theme_hc() + 
+  theme(legend.position = "top")
+
+tapply(fws$eff_Q, INDEX = fws$Programmatic, FUN = mean, na.rm = TRUE)
 ```
+
+As with the status of the species section, the quality of the effects analysis
+did not differ between Services nor, within FWS, between (non-) programmatics.
 
 ### cumulative effects
 
@@ -270,7 +372,50 @@ aictab(CEQ_mods$mods)
 CEQ_mods$summaries[[1]]
 CEQ_mods$coef[[1]]
 get_ORs_CIs_alt(CEQ_mods$mods[[1]])
+tapply(formal$CE_Q, INDEX = formal$Service, FUN = mean, na.rm = TRUE)
+
+ce_q <- ggplot(formal, aes(CE_Q)) +
+  geom_bar(
+    aes(fill = Service), 
+    position = position_dodge(preserve = "single"),
+    alpha = 0.8) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Cum. Effects") +
+  labs(x = "Score", y = "") +
+  theme_hc() + 
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
+
+ggplot(fws, aes(CE_Q, fill = factor(Programmatic))) +
+  geom_histogram(bins = 3,
+                 position = "identity",
+                 alpha = 0.8) +
+  scale_fill_viridis(discrete = TRUE) +
+  labs(x = "Cum. Effects Score",
+       y = "# of consultations",
+       fill = "Programmatic?") +
+  theme_hc() + 
+  theme(legend.position = "top")
+
+tapply(fws$CE_Q, INDEX = fws$Programmatic, FUN = mean, na.rm = TRUE)
 ```
+
+As with the status of the species section, the quality of cumulative effects 
+analysis did not differ between Services. There was a marginal difference - 
+based on simple graphical analysis - between programmatics and non-programmatics.
+
+```{r components_combo}
+pdf(file = "inst/figures/Fig2.pdf", height = 10, width = 10)
+multiplot(sp_stat, base_q, eff_q, ce_q, cols = 2)
+dev.off()
+```
+
+__*Conclusion*__ 
+The primary cause of the difference between FWS and NMFS overall scores was 
+driven by differences in the environmental baseline analysis. NMFS's scores
+tended to be higher than FWS in the other quality components, and even though
+not statistically significant alone, also like contributed to the overall
+difference.
 
 ## Quality components: informal consultations
 
@@ -280,31 +425,79 @@ get_ORs_CIs_alt(CEQ_mods$mods[[1]])
 action_mods <- inf_binom(informal, informal$mention_action)
 aictab(action_mods$mods)
 action_mods$summaries[[1]] # nothing significant (or even close)
+
+infmac <- filter(informal, !is.na(mention_action))
+mact <- ggplot(infmac, aes(factor(mention_action))) +
+  geom_histogram(
+    aes(fill = Service), 
+    position = position_dodge(preserve = "single"),
+    stat = "count",
+    alpha = 0.8) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Mention Action") +
+  labs(x = "", y = "# consultations") +
+  scale_x_discrete(labels = c(0, 1)) +
+  theme_hc() + 
+  theme(legend.position = c(0.1, 0.8),
+        plot.title = element_text(hjust = 0.5))
 ```
+
+There is no relationship between whether the action was mentioned and Service or
+consultation duration.
 
 ### Action analysis
 
 ```{r}
 act_analysis_mods <- inf_binom(informal, informal$act_analysis)
 aictab(act_analysis_mods$mods)
-act_analysis_mods$summaries[[1]] # only duration significant, and tiny effect (1.07 OR)
+act_analysis_mods$summaries[[1]] 
+get_ORs_CIs_alt(act_analysis_mods$mods[[1]])
 
-ggplot(data = informal, aes(x = total_duration, y = act_analysis)) +
-geom_jitter(height = 0.1, size = 3, alpha = 0.2) +
-theme_hc()
+infan <- filter(informal, !is.na(act_analysis))
+analy <- ggplot(infan, aes(factor(act_analysis))) +
+  geom_histogram(
+    aes(fill = Service), 
+    position = position_dodge(preserve = "single"),
+    stat = "count",
+    alpha = 0.8) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Action Analysis") +
+  labs(x = "Score", y = "# consultations") +
+  scale_x_discrete(labels = c(0, 1)) +
+  theme_hc() + 
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
 ```
+
+Only duration significant - a very slight decline with duration - and tiny 
+effect size (1.02 OR).
 
 ### Species analysis
 
 ```{r}
 sp_analysis_mods <- inf_binom(informal, informal$sp_analysis)
 aictab(sp_analysis_mods$mods)
-sp_analysis_mods$summaries[[2]] # only duration significant, and tiny effect (1.07 OR)
+sp_analysis_mods$summaries[[2]]
+get_ORs_CIs_alt(sp_analysis_mods$mods[[2]])
 
-ggplot(data = informal, aes(x = total_duration, y = sp_analysis)) +
-geom_jitter(height = 0.1, size = 3, alpha = 0.2) +
-theme_hc()
+infsp <- filter(informal, !is.na(sp_analysis))
+sp_an <- ggplot(infsp, aes(factor(sp_analysis))) +
+  geom_histogram(aes(fill = Service), 
+                 # position = "identity",
+                 position = position_dodge(prespreserve = "single"),
+                 stat = "count",
+                 alpha = 0.8) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Species Analysis") +
+  labs(x = "", y = "") +
+  scale_x_discrete(labels = c(0, 1)) +
+  theme_hc() + 
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
 ```
+
+Duration X Service is significant, but the effect size is again tiny 
+(OR = 1.004).
 
 ### Reason informal
 
@@ -312,11 +505,26 @@ theme_hc()
 mention_reason_inf_mods <- inf_binom(informal, informal$mention_reason_inf)
 aictab(mention_reason_inf_mods$mods)
 mention_reason_inf_mods$summaries[[1]]
+get_ORs_CIs_alt(mention_reason_inf_mods$mods[[1]])
 
-qplot(data = informal, x = Service, y = mention_reason_inf, geom="violin") +
-    geom_jitter(height = 0.1, width = 0.4, alpha = 0.2, size = 3) +
-    theme_hc()
+infre <- filter(informal, !is.na(mention_reason_inf))
+reason <- ggplot(infre, aes(factor(mention_reason_inf))) +
+  geom_bar(
+    aes(fill = Service), 
+    position = position_dodge(preserve = "single"),
+    stat = "count",
+    alpha = 0.8) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Reason Informal") +
+  labs(x = "Score", y = "") +
+  scale_x_discrete(labels = c(0, 1)) +
+  theme_hc() + 
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
 ```
+
+Only duration significant - a very slight increase of whether the reason a 
+consultation was informal with duration - and tiny effect size (1.03 OR).
 
 ### Map included?
 
@@ -324,14 +532,34 @@ qplot(data = informal, x = Service, y = mention_reason_inf, geom="violin") +
 map_mods <- inf_binom(informal, informal$map)
 aictab(map_mods$mods)
 map_mods$summaries[[1]] # Service has OR = 5.08
-map_mods$summaries[[3]]
+get_ORs_CIs_alt(mention_reason_inf_mods$mods[[1]])
 
-qplot(data = informal, x = Service, y = map, geom="violin") +
-    geom_jitter(height = 0.1, width = 0.4, alpha = 0.2, size = 3) +
-    theme_hc()
+infmap <- filter(informal, !is.na(map))
+wmap <- ggplot(infmap, aes(factor(map))) +
+  geom_bar(
+    aes(fill = Service), 
+    bins = 2,
+    stat = "count",
+    position = position_dodge(prespreserve = "single"),
+    alpha = 0.8) +
+  scale_fill_viridis(discrete = TRUE) +
+  ggtitle("Map?") +
+  labs(x = "Score", y = "") +
+  theme_hc() + 
+  scale_x_discrete(labels = c(0, 1)) +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
 ```
 
-# Plots
+```{r combo_informal_plot}
+pdf(file = "inst/figures/Fig3.pdf", height = 8, width = 12)
+multiplot(mact, analy, sp_an, reason, wmap, cols = 3)
+dev.off()
+```
+
+# Additional Plots
+
+This plots section is basically obsolete because figures have been added above.
 
 ## Overall quality terms
 
