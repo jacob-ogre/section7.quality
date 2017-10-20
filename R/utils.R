@@ -86,11 +86,147 @@ run_glm_combo <- function(x) {
   return(list(mods = mods, AICs = AICs, summaries = sums, aovs = aovs))
 }
 
+#' Run binomial GLM for overall quality of formal consultations
+#'
+#' @param x The 'formal' data.frame of formal consultations
+#' @return A list of results including:
+#'   \describe{
+#'     \item{mods}{Nine GLM (binomial) model objects}
+#'     \item{AICs}{AICc values for the nine models}
+#'     \item{summaries}{Results from \code{summary(mod)} for the nine models}
+#'     \item{aovs}{Analysis of Variance for the nine models}
+#'   }
+#' @importFrom AICcmodavg AICc
+#' @export
+#' @examples
+#' \dontrun{
+#' run_glm_combo(combo)
+#' }
+run_glm_combo_formal <- function(x) {
+  resp <- cbind(as.integer(x$Sum_Q), x$Points_Possible)
+  mod_1 <- glm(resp ~ Service + Year + Programmatic + Action_type + total_duration,
+               data = x,
+               family = binomial)
+  mod_1a <- glm(resp ~ Service + Year + Programmatic + total_duration,
+               data = x,
+               family = binomial)
+  mod_2 <- glm(resp ~ Service + Year + total_duration,
+               data = x,
+               family = binomial)
+  mod_3 <- glm(resp ~ Service,
+               data = x,
+               family = binomial)
+  mod_4 <- glm(resp ~ total_duration,
+               data = x,
+               family = binomial)
+  mod_5 <- glm(resp ~ Service + total_duration,
+               data = x,
+               family = binomial)
+  mod_6 <- glm(resp ~ Service + Year + Action_type + total_duration,
+               data = x,
+               family = binomial)
+  mod_7 <- glm(resp ~ Service + Programmatic,
+               data = x,
+               family = binomial)
+
+  mods <- list(m1 <- mod_1,
+               m1a <- mod_1a,
+               m2 <- mod_2,
+               m3 <- mod_3,
+               m4 <- mod_4,
+               m5 <- mod_5,
+               m6 <- mod_6,
+               m7 <- mod_7)
+  AICs <- list(m1 <- AICc(mod_1),
+               m1a <- AICc(mod_1a),
+               m2 <- AICc(mod_2),
+               m3 <- AICc(mod_3),
+               m4 <- AICc(mod_4),
+               m5 <- AICc(mod_5),
+               m6 <- AICc(mod_6),
+               m7 <- AICc(mod_7))
+
+  sums <- list(m1 <- summary(mod_1),
+               m1a <- summary(mod_1a),
+               m2 <- summary(mod_2),
+               m3 <- summary(mod_3),
+               m4 <- summary(mod_4),
+               m5 <- summary(mod_5),
+               m6 <- summary(mod_6),
+               m7 <- summary(mod_7))
+  aovs <- list(m1 <- aov(mod_1),
+               m1a <- aov(mod_1a),
+               m2 <- aov(mod_2),
+               m3 <- aov(mod_3),
+               m4 <- aov(mod_4),
+               m5 <- aov(mod_5),
+               m6 <- aov(mod_6),
+               m7 <- aov(mod_7))
+  return(list(mods = mods, AICs = AICs, summaries = sums, aovs = aovs))
+}
+
+#' Run binomial GLM for overall quality of informal consultations
+#'
+#' @param x The 'informal' data.frame of just informal consultations
+#' @return A list of results including:
+#'   \describe{
+#'     \item{mods}{Nine GLM (binomial) model objects}
+#'     \item{AICs}{AICc values for the nine models}
+#'     \item{summaries}{Results from \code{summary(mod)} for the nine models}
+#'     \item{aovs}{Analysis of Variance for the nine models}
+#'   }
+#' @importFrom AICcmodavg AICc
+#' @export
+#' @examples
+#' \dontrun{
+#' run_glm_combo(combo)
+#' }
+run_glm_combo_informal <- function(x) {
+  resp <- cbind(as.integer(x$Sum_Q), x$Points_Possible)
+  mod_1 <- glm(resp ~ Service + Year + Action_type + total_duration,
+               data = x,
+               family = binomial)
+  mod_2 <- glm(resp ~ Service + Year + total_duration,
+               data = x,
+               family = binomial)
+  mod_3 <- glm(resp ~ Service,
+               data = x,
+               family = binomial)
+  mod_4 <- glm(resp ~ total_duration,
+               data = x,
+               family = binomial)
+  mod_5 <- glm(resp ~ Service + total_duration,
+               data = x,
+               family = binomial)
+
+  mods <- list(m1 <- mod_1,
+               m2 <- mod_2,
+               m3 <- mod_3,
+               m4 <- mod_4,
+               m5 <- mod_5)
+  AICs <- list(m1 <- AICc(mod_1),
+               m2 <- AICc(mod_2),
+               m3 <- AICc(mod_3),
+               m4 <- AICc(mod_4),
+               m5 <- AICc(mod_5))
+
+  sums <- list(m1 <- summary(mod_1),
+               m2 <- summary(mod_2),
+               m3 <- summary(mod_3),
+               m4 <- summary(mod_4),
+               m5 <- summary(mod_5))
+  aovs <- list(m1 <- aov(mod_1),
+               m2 <- aov(mod_2),
+               m3 <- aov(mod_3),
+               m4 <- aov(mod_4),
+               m5 <- aov(mod_5))
+  return(list(mods = mods, AICs = AICs, summaries = sums, aovs = aovs))
+}
+
 #' Return conf. intervals for Odds Ratios of GLM
 #'
 #' @param x A model of class
 #' @return A table of odds ratios and 95% CI
-#' @seealso if any see alsos
 #' @export
 #' @examples
 #' \dontrun{
@@ -118,36 +254,45 @@ get_ORs_CIs <- function(x) {
 #' run_polrs(formal, formal$status_Q)
 #' }
 run_polrs <- function(x, y) {
-  mod1 <- polr(as.factor(y) ~ Service + Programmatic + Year,
+  mod1 <- clmm(as.factor(y) ~ Service + (1|PDF_ID),
                data = x,
                Hess = TRUE)
-  mod2 <- polr(as.factor(y) ~ Service + Programmatic,
+  mod2 <- clmm(as.factor(y) ~ Service + yr + (1|PDF_ID),
                data = x,
                Hess = TRUE)
-  mod3 <- polr(as.factor(y) ~ Service,
+  mod3 <- clmm(as.factor(y) ~ yr + (1|PDF_ID),
                data = x,
                Hess = TRUE)
-  mod4 <- polr(as.factor(y) ~ Programmatic,
-               data = x,
-               Hess = TRUE)
+  # mod1 <- polr(as.factor(y) ~ Service + Programmatic + Year,
+  #              data = x,
+  #              Hess = TRUE)
+  # mod2 <- polr(as.factor(y) ~ Service + Programmatic,
+  #              data = x,
+  #              Hess = TRUE)
+  # mod3 <- polr(as.factor(y) ~ Service,
+  #              data = x,
+  #              Hess = TRUE)
+  # mod4 <- polr(as.factor(y) ~ Programmatic,
+  #              data = x,
+  #              Hess = TRUE)
 
   mods <- list(m1 = mod1,
                m2 = mod2,
-               m3 = mod3,
-               m4 = mod4)
+               m3 = mod3) #,
+               # m4 = mod4)
   AICs <- list(m1 = AICc(mod1),
                m2 = AICc(mod2),
-               m3 = AICc(mod3),
-               m4 = AICc(mod4))
+               m3 = AICc(mod3)) #,
+               # m4 = AICc(mod4))
   sums <- list(m1 = summary(mod1),
                m2 = summary(mod2),
-               m3 = summary(mod3),
-               m4 = summary(mod4))
+               m3 = summary(mod3)) #,
+               # m4 = summary(mod4))
   coef <- list(m1 = coeftest(mod1),
                m2 = coeftest(mod2),
-               m3 = coeftest(mod3),
-               m4 = coeftest(mod4))
-    return(list(mods = mods, AICs = AICs, summaries = sums, coef = coef))
+               m3 = coeftest(mod3)) #,
+               # m4 = coeftest(mod4))
+  return(list(mods = mods, AICs = AICs, summaries = sums, coef = coef))
 }
 
 #' Return conf. intervals for Odds Ratios of GLM (alt version)

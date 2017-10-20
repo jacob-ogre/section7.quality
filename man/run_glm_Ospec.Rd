@@ -24,4 +24,3 @@ Run binomial GLM for overall consultation specificity
 \examples{
 run_glm_Ospec(formal)
 }
-

@@ -26,4 +26,3 @@ Run binomial GLM for informal consultation quality components
 \examples{
 inf_binom(informal, informal$map)
 }
-

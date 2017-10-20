@@ -20,7 +20,3 @@ Return conf. intervals for Odds Ratios of GLM
 get_ORs_CIs(mod1)
 }
 }
-\seealso{
-if any see alsos
-}
-

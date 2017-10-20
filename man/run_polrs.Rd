@@ -28,4 +28,3 @@ Run ordinal linear regression on consultation quality components
 run_polrs(formal, formal$status_Q)
 }
 }
-

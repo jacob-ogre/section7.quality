@@ -20,4 +20,3 @@ Unclear why this alternative version exists...
 get_ORs_CIs_alt(mod1)
 }
 }
-

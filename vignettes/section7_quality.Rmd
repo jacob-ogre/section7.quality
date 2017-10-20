@@ -19,6 +19,7 @@ output:
 
 ```{r steup}
 library(AICcmodavg)
+library(dplyr)
 library(ggplot2)
 library(ggthemes)
 library(glmulti)
@@ -27,9 +28,11 @@ library(lm.beta)
 library(lmtest)
 library(MASS)
 library(nnet)
+library(ordinal)
 library(readxl)
 library(readr)
 library(section7.quality)
+library(viridis)
 
 # Load the data
 data(combo, package = "section7.quality")
@@ -37,6 +40,48 @@ data(formal, package = "section7.quality")
 data(informal, package = "section7.quality")
 data(no_prog, package = "section7.quality")
 data(all_no_prog, package = "section7.quality")
+
+multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
+  library(grid)
+  # Make a list from the ... arguments and plotlist
+  plots <- c(list(...), plotlist)
+
+  numPlots = length(plots)
+  if (is.null(layout)) {
+    layout <- matrix(
+      seq(1, cols * ceiling(numPlots/cols)),
+      ncol = cols, nrow = ceiling(numPlots/cols)
+    )
+  }
+
+  if (numPlots==1) {
+    print(plots[[1]])
+  } else {
+    grid.newpage()
+    pushViewport(
+      viewport(
+        layout = grid.layout(
+          nrow(layout), 
+          ncol(layout)
+        )
+      )
+    )
+
+    # Make each plot, in the correct location
+    for (i in 1:numPlots) {
+      matchidx <- as.data.frame(
+        which(layout == i, arr.ind = TRUE)
+      )
+      print(
+        plots[[i]], 
+        vp = viewport(
+          layout.pos.row = matchidx$row,
+          layout.pos.col = matchidx$col
+        )
+      )
+    }
+  }
+}
 ```
 
 # Analyses
@@ -55,6 +100,33 @@ We start broad and slowly drill down on the results:
 ```{r overall_qual}
 all_overQ <- run_glm_combo(combo)
 kable(aictab(all_overQ$mods))
+
+bar <- ggplot(combo, aes(combo$Overall_Q, fill = Service)) + 
+  geom_histogram(alpha = 0.8, position = position_dodge(), bins = 7) + 
+  labs(x = "Overall Quality") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_hc() +
+  theme(
+    legend.position = c(.05, .95),
+    legend.justification = c("left", "top"),
+    legend.box.just = "right",
+    legend.margin = margin(6, 6, 6, 6)
+  )
+
+box <- ggplot(combo, aes(y = combo$Overall_Q, x = Service)) +
+  geom_boxplot(aes(fill = combo$Service), alpha = 0.8) + 
+  labs(x = "Overall Quality") +
+  scale_color_viridis(discrete = TRUE) +
+  scale_fill_viridis(discrete = TRUE) +
+  coord_flip() +
+  labs(x = "", y = "") +
+  theme_hc() + 
+  theme(legend.position = "none",
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(2.5,0.3,0.1,1.1), "cm"))
+
+multiplot(box, bar)
 ```
 
 Models 9 (best) & 2 differ only by year...base inference on 9, but note year 
@@ -65,15 +137,102 @@ mod9_OR_CI <- get_ORs_CIs(all_overQ$mods[[9]])
 kable(mod9_OR_CI)
 ```
 
+### Formal and informal consultations separate
+
+```{r overall_qual_formal}
+formal_overQ <- run_glm_combo_formal(formal)
+kable(aictab(formal_overQ$mods))
+mod2_OR_CI <- get_ORs_CIs(formal_overQ$mods[[2]])
+kable(mod2_OR_CI)
+
+informal_overQ <- run_glm_combo_informal(informal)
+kable(aictab(informal_overQ$mods))
+mod2_OR_CI <- get_ORs_CIs(informal_overQ$mods[[2]])
+kable(mod2_OR_CI)
+
+#######################
+# plot!
+f_bar <- ggplot(formal, aes(formal$Overall_Q, fill = Service)) + 
+  geom_histogram(alpha = 0.8, position = position_dodge(), bins = 7) + 
+  labs(x = "Overall Quality (formal)") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_hc() +
+  theme(
+    legend.position = c(.05, .95),
+    legend.justification = c("left", "top"),
+    legend.box.just = "right",
+    legend.margin = margin(6, 6, 6, 6)
+  )
+
+i_bar <- ggplot(informal, aes(informal$Overall_Q, fill = Service)) + 
+  geom_histogram(alpha = 0.8, position = position_dodge(), bins = 7) + 
+  labs(x = "Overall Quality (informal)") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_hc() +
+  theme(
+    axis.title.y = element_blank(),
+    legend.position = "none",
+    legend.justification = c("left", "top"),
+    legend.box.just = "right",
+    legend.margin = margin(6, 6, 6, 6)
+  )
+
+f_box <- ggplot(formal, aes(y = formal$Overall_Q, x = Service)) +
+  geom_boxplot(aes(fill = formal$Service), alpha = 0.8) + 
+  labs(x = "Overall Quality") +
+  scale_color_viridis(discrete = TRUE) +
+  scale_fill_viridis(discrete = TRUE) +
+  coord_flip() +
+  labs(x = "", y = "") +
+  theme_hc() + 
+  theme(legend.position = "none",
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(2.5,0.3,0.1,0.1), "cm"))
+
+i_box <- ggplot(informal, aes(y = informal$Overall_Q, x = Service)) +
+  geom_boxplot(aes(fill = informal$Service), alpha = 0.8) + 
+  labs(x = "Overall Quality") +
+  scale_color_viridis(discrete = TRUE) +
+  scale_fill_viridis(discrete = TRUE) +
+  coord_flip() +
+  labs(x = "", y = "") +
+  theme_hc() + 
+  theme(legend.position = "none",
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(2.5,0.3,0.1,0.5), "cm"))
+
+multiplot(f_box, f_bar, i_box, i_bar, cols = 2)
+```
+
 ## Quality components: formal consultations
+```{r echo = FALSE}
+formal$yr <- formal$Year - 2008
+fws_prog <- filter(formal, Service == "FWS" & Programmatic == 1)
+fws_noprog <- filter(formal, Service == "FWS" & Programmatic == 0)
+```
+
+We next dive into the individuals consultation components to identify patterns
+of variation. We focus on just two predictors, Service and year in the models,
+which include a random effects term for the consultation. We exclude whether the
+consultation was programmatic because programmatics were only done by FWS, which 
+results in badly inflated odds ratios. Instead, we provide only a simple 
+graphical analyses of programmatic effects.
 
 ### Species status
 
 ```{r}
 statusQ_mods <- run_polrs(formal, formal$status_Q)
 aictab(statusQ_mods$mods)
-statusQ_mods$summaries[[2]] 
-statusQ_mods$coef[[2]]
+statusQ_mods$summaries[[1]] 
+statusQ_mods$coef[[1]]
+get_ORs_CIs_alt(statusQ_mods$mods[[1]])
+
+ggplot(formal, aes(status_Q)) +
+  geom_bar(data = fws_prog, fill = "red", alpha = 0.3) +
+  geom_bar(data = fws_noprog, fill = "blue", alpha = 0.3) +
+  theme_hc()
 ``` 
 
 Using model 2 b/c all params are present and very similar.
@@ -85,6 +244,12 @@ baselineQ_mods <- run_polrs(formal, formal$baseline_Q)
 aictab(baselineQ_mods$mods)
 baselineQ_mods$summaries[[1]]
 baselineQ_mods$coef[[1]]
+get_ORs_CIs_alt(baselineQ_mods$mods[[1]])
+
+ggplot(formal, aes(baseline_Q, fill = Programmatic)) +
+  geom_bar(data = fws_prog, fill = "red", alpha = 0.3) +
+  geom_bar(data = fws_noprog, fill = "blue", alpha = 0.3) +
+  theme_hc()
 ```
 
 ### effects analysis quality
@@ -94,6 +259,7 @@ effQ_mods <- run_polrs(formal, formal$eff_Q)
 aictab(effQ_mods$mods)
 effQ_mods$summaries[[1]]
 effQ_mods$coef[[1]]
+get_ORs_CIs_alt(effQ_mods$mods[[1]])
 ```
 
 ### cumulative effects
@@ -101,8 +267,9 @@ effQ_mods$coef[[1]]
 ```{r}
 CEQ_mods <- run_polrs(formal, formal$CE_Q)
 aictab(CEQ_mods$mods)
-# CR_mods$summaries[[1]]
-# CM_mods$coef[[1]]
+CEQ_mods$summaries[[1]]
+CEQ_mods$coef[[1]]
+get_ORs_CIs_alt(CEQ_mods$mods[[1]])
 ```
 
 ## Quality components: informal consultations
@@ -182,6 +349,13 @@ boxplot(combo[combo$Programmatic == "0", ]$Overall_Q ~ combo[combo$Programmatic 
         main = "Without programmatics",
         ylab = "")
 par(mfrow = c(1, 1))
+
+par(mfrow = c(2, 1))
+ggplot(combo, aes(x = Service, y = Overall_Q)) +
+  geom_boxplot() +
+  coord_flip() +
+  theme_hc()
+
 ```
 
 ### Formal only
